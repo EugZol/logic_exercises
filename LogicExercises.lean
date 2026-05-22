@@ -1,1 +1,2 @@
 import LogicExercises.Basic
+import LogicExercises.Exercise

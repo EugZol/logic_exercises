@@ -1,13 +1,19 @@
-# logic_exercises
+# Logic exercises
 
-## GitHub configuration
+A set of logic exercises. Covered topics:
 
-To set up your new GitHub repository, follow these steps:
+* Hilbert-style intuitionistic logic (`IntExercises.lean`)
 
-* Under your repository name, click **Settings**.
-* In the **Actions** section of the sidebar, click "General".
-* Check the box **Allow GitHub Actions to create and approve pull requests**.
-* Click the **Pages** section of the settings sidebar.
-* In the **Source** dropdown menu, select "GitHub Actions".
+Quickstart: run the dev container, replace `exercise` terms with your solutions in `*Exercises.lean` files.
 
-After following the steps above, you can remove this section from the README file.
+## Devcontainer
+
+VS code devcontainer is available, run with Ctrl+Shift+P, "Reopen in container".
+
+## Exercises
+
+To solve exercises, open `<something>Exercises.lean` files. The corresponding `<something>.lean` file would contain full solutions, so don't look into it unless you want spoilers.
+
+### Regenerate exercises
+
+Run `python3 scripts/make_exercises.py LogicExercises/Int.lean`. This writes the sibling `LogicExercises/IntExercises.lean` file.

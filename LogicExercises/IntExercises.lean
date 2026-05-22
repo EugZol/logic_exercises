@@ -26,7 +26,7 @@ end FormulaNotation
 
 inductive IntDerives (Γ : Set IntFormula) : IntFormula → Prop
 -- `hyp`: "hypothesis", if formula is in Γ, it derives
-| hyp {a : IntFormula} : /- ex -/ a ∈ Γ /- /ex -/ → IntDerives Γ a
+| hyp {a : IntFormula} : exercise → IntDerives Γ a
 | ax0 {x : Nat} : IntDerives Γ (varᵢ x)
 | ax1 {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a)
 | ax2 {a b c : IntFormula} : IntDerives Γ ((a →ᵢ b →ᵢ c) →ᵢ (a →ᵢ b) →ᵢ a →ᵢ c)
@@ -40,7 +40,7 @@ inductive IntDerives (Γ : Set IntFormula) : IntFormula → Prop
 | ax8 {a b : IntFormula} : IntDerives Γ (a →ᵢ ¬ᵢ a →ᵢ b)
 -- `mp`: "modus ponens", if `a` derives and `a →ᵢ b` derives, then
 -- `b` derives (all in the same context)
-| mp {a b : IntFormula} : /- ex -/ IntDerives Γ a → IntDerives Γ (a →ᵢ b) → IntDerives Γ b /- /ex -/
+| mp {a b : IntFormula} : exercise
 
 namespace DerivesNotation
 
@@ -53,81 +53,39 @@ example {Γ : Set IntFormula} (a b c : IntFormula)
     Γ ⊢ᵢ c := by
   have ha : Γ ⊢ᵢ a := IntDerives.mp h2 IntDerives.ax3_1
   have hb : Γ ⊢ᵢ b := IntDerives.mp h2 IntDerives.ax3_2
-  -- ex
-  exact IntDerives.mp hb (IntDerives.mp ha h1)
-  -- /ex
+  exercise
 
 example {Γ : Set IntFormula} (a b c : IntFormula)
     (h : Γ ⊢ᵢ a ∧ᵢ b →ᵢ c) (ha : Γ ⊢ᵢ a) (hb : Γ ⊢ᵢ b) :
     Γ ⊢ᵢ c := by
-  -- ex
-  have hab : Γ ⊢ᵢ a ∧ᵢ b :=
-    IntDerives.mp hb (IntDerives.mp ha IntDerives.ax4)
-  exact IntDerives.mp hab h
-  -- /ex
+  exercise
 
 -- If something derives in context Γ', it derives when adding any hypotheses to Γ'
 theorem Γ_ext {Γ Γ' : Set IntFormula} {a : IntFormula} :
     (Γ' ⊆ Γ) → (Γ' ⊢ᵢ a) → (Γ ⊢ᵢ a) := by
   intro hΓ ha
   induction ha with
-  -- ex
-  | hyp hb =>
-    apply IntDerives.hyp
-    tauto
-  | @ax0 x =>
-    exact IntDerives.ax0
-  | @ax1 a' b =>
-    exact IntDerives.ax1
-  | @ax2 a' b c =>
-    exact IntDerives.ax2
-  | @ax3_1 a' b =>
-    exact IntDerives.ax3_1
-  | @ax3_2 a' b =>
-    exact IntDerives.ax3_2
-  | @ax4 a' b =>
-    exact IntDerives.ax4
-  | @ax5_1 a' b =>
-    exact IntDerives.ax5_1
-  | @ax5_2 a' b =>
-    exact IntDerives.ax5_2
-  | @ax6 a' b =>
-    exact IntDerives.ax6
-  | @ax7 a' b =>
-    exact IntDerives.ax7
-  | @ax8 a' b =>
-    exact IntDerives.ax8
-  | @mp a' b' ha' ha'b' iha ihb =>
-    exact IntDerives.mp iha ihb
-  -- /ex
+  exercise
 
 theorem imp_selfᵢ {Γ : Set IntFormula} {a : IntFormula} :
     Γ ⊢ᵢ a →ᵢ a := by
-  have ha1 : Γ ⊢ᵢ a →ᵢ a →ᵢ a := /- ex -/ IntDerives.ax1 /- /ex -/
-  have ha2 : Γ ⊢ᵢ a →ᵢ (a →ᵢ a) →ᵢ a := /- ex -/ IntDerives.ax1 /- /ex -/
+  have ha1 : Γ ⊢ᵢ a →ᵢ a →ᵢ a := exercise
+  have ha2 : Γ ⊢ᵢ a →ᵢ (a →ᵢ a) →ᵢ a := exercise
   apply IntDerives.mp ha1
   apply IntDerives.mp ha2
-  exact /- ex -/ IntDerives.ax2 /- /ex -/
+  exact exercise
 
 theorem imp_trueᵢ {Γ : Set IntFormula} {a b : IntFormula} :
     (Γ ⊢ᵢ a) → (Γ ⊢ᵢ b →ᵢ a) := by
   intro h
-  -- ex
-  exact IntDerives.mp h IntDerives.ax1
-  -- /ex
+  exercise
 
 theorem deduction_revert {Γ : Set IntFormula} {a b : IntFormula} :
     (Γ ⊢ᵢ a →ᵢ b) → (Γ ∪ {a} ⊢ᵢ b) := by
   intro h
   have ha : Γ ∪ {a} ⊢ᵢ a := by
-    -- ex
-    apply IntDerives.hyp
-    tauto
-    -- /ex
-  -- ex
-  apply IntDerives.mp (a := a) ha
-  apply Γ_ext (Γ := Γ ∪ {a}) (Γ' := Γ) <;> tauto
-  -- /ex
+    exercise
+  exercise
 
 theorem deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
     (Γ ∪ {a} ⊢ᵢ b) → (Γ ⊢ᵢ a →ᵢ b) := by
@@ -135,20 +93,9 @@ theorem deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
   induction h with
   | hyp hb =>
     rcases hb with hb | hb
-    -- ex
-    · eapply IntDerives.mp
-      · apply IntDerives.hyp hb
-      · apply IntDerives.ax1
-    · simp only [Set.mem_singleton_iff] at hb
-      rw [hb]
-      exact imp_selfᵢ
-    -- /ex
+    exercise
   | @ax0 x =>
-    -- ex
-    apply IntDerives.mp (a := (varᵢ x))
-    · exact IntDerives.ax0
-    · exact IntDerives.ax1
-    -- /ex
+    exercise
   | @ax1 a' b =>
     exact imp_trueᵢ IntDerives.ax1
   | @ax2 a' b c =>
@@ -170,8 +117,4 @@ theorem deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
   | @ax8 a' b =>
     exact imp_trueᵢ IntDerives.ax8
   | @mp a' b' ha' ha'b' iha ihb =>
-    -- ex
-    apply IntDerives.mp (a := a →ᵢ a') iha
-    apply IntDerives.mp (a := a →ᵢ a' →ᵢ b') ihb
-    exact IntDerives.ax2
-    -- /ex
+    exercise

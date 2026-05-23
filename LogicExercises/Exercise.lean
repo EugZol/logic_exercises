@@ -1,6 +1,10 @@
-import Lean
+module
+
+public meta import Lean.Elab.Term.TermElabM
 
 open Lean Elab Term Meta
+
+public section
 
 /--
 `exercise` is a placeholder for worksheet omissions.

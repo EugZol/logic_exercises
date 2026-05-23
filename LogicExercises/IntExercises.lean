@@ -1,5 +1,9 @@
+module
+
 import Mathlib
 import LogicExercises.Exercise
+
+set_option linter.privateModule false
 
 -- Intuitionistic logic
 
@@ -11,24 +15,19 @@ inductive IntFormula : Type
 | bot  : IntFormula
 deriving Repr, DecidableEq
 
-def not (x : IntFormula) : IntFormula := IntFormula.imp x IntFormula.bot
-def iff (x y : IntFormula) : IntFormula := IntFormula.and (IntFormula.imp x y) (IntFormula.imp y x)
+def IntFormula.not (x : IntFormula) : IntFormula := IntFormula.imp x IntFormula.bot
+def IntFormula.iff (x y : IntFormula) : IntFormula := IntFormula.and (IntFormula.imp x y) (IntFormula.imp y x)
 
-namespace FormulaNotation
-
-notation "varᵢ" n => IntFormula.var n
-notation "¬ᵢ" n => not n
-notation "⊥ᵢ" => IntFormula.bot
-infixr:35 " ∧ᵢ " => IntFormula.and
-infixr:30 " ∨ᵢ " => IntFormula.or
-infixr:25 " →ᵢ " => IntFormula.imp
-infixr:25 " ↔ᵢ " => iff
-
-end FormulaNotation
+local notation "varᵢ" n => IntFormula.var n
+local notation "¬ᵢ" n => IntFormula.not n
+local notation "⊥ᵢ" => IntFormula.bot
+local infixr:35 " ∧ᵢ " => IntFormula.and
+local infixr:30 " ∨ᵢ " => IntFormula.or
+local infixr:25 " →ᵢ " => IntFormula.imp
+local infixr:25 " ↔ᵢ " => IntFormula.iff
 
 inductive IntDerives (Γ : Set IntFormula) : IntFormula → Prop
--- `hyp`: "hypothesis", if formula is in Γ, it derives
-| hyp {a : IntFormula} : exercise → IntDerives Γ a
+| hyp {a : IntFormula} : a ∈ Γ → IntDerives Γ a
 | var {x : Nat} : IntDerives Γ (varᵢ x)
 | imp_k {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a)
 | imp_s {a b c : IntFormula} : IntDerives Γ ((a →ᵢ b →ᵢ c) →ᵢ (a →ᵢ b) →ᵢ a →ᵢ c)
@@ -40,15 +39,9 @@ inductive IntDerives (Γ : Set IntFormula) : IntFormula → Prop
 | or_elim {a b c : IntFormula} : IntDerives Γ ((a →ᵢ c) →ᵢ (b →ᵢ c) →ᵢ a ∨ᵢ b →ᵢ c)
 | contra {a b : IntFormula} : IntDerives Γ ((a →ᵢ b) →ᵢ (a →ᵢ ¬ᵢ b) →ᵢ ¬ᵢ a)
 | exfalso {a b : IntFormula} : IntDerives Γ (a →ᵢ ¬ᵢ a →ᵢ b)
--- `mp`: "modus ponens", if `a` derives and `a →ᵢ b` derives, then
--- `b` derives (all in the same context Γ)
-| mp {a b : IntFormula} : exercise
+| mp {a b : IntFormula} : IntDerives Γ a → IntDerives Γ (a →ᵢ b) → IntDerives Γ b
 
-namespace DerivesNotation
-
-infixr:20 " ⊢ᵢ " => IntDerives
-
-end DerivesNotation
+local infixr:20 " ⊢ᵢ " => IntDerives
 
 lemma imp_andᵢ {Γ : Set IntFormula} (a b c : IntFormula)
     (h1 : Γ ⊢ᵢ a →ᵢ b →ᵢ c) (h2 : Γ ⊢ᵢ a ∧ᵢ b) :
@@ -160,3 +153,26 @@ theorem and_imp_iff {Γ : Set IntFormula} {a b c : IntFormula} :
       exercise
     _ ↔ (Γ ∪ {a} ⊢ᵢ b →ᵢ c) := exercise
     _ ↔ (Γ ⊢ᵢ a →ᵢ b →ᵢ c) := exercise
+
+-- Kripke semantics
+structure IntModel : Type where
+  worlds : Set (Set IntFormula)
+  worlds_order : PartialOrder worlds
+  closed_and : ∀ w : worlds, ∀ a b : IntFormula,
+    (a ∧ᵢ b) ∈ w.1 ↔ (a ∈ w.1 ∧ b ∈ w.1)
+  closed_or : ∀ w : worlds, ∀ a b : IntFormula,
+    (a ∨ᵢ b) ∈ w.1 ↔ (a ∈ w.1 ∨ b ∈ w.1)
+  closed_imp : ∀ w : worlds, ∀ a b : IntFormula,
+    (a →ᵢ b) ∈ w.1 ↔
+    (∀ w' : worlds, w ≤ w' → a ∉ w'.1 ∨ b ∈ w'.1)
+  bot_not_mem : ∀ w : worlds, ⊥ᵢ ∉ w.1
+
+theorem closed_not (m : IntModel) :
+    ∀ w : m.worlds, ∀ a : IntFormula,
+    (¬ᵢ a) ∈ w.1 ↔
+    (∀ w' : m.worlds, w ≤ w' → a ∉ w'.1) := by
+  intro w a
+  suffices ∀ w' : m.worlds, w ≤ w' → (a ∉ w'.1 ∨ ⊥ᵢ ∈ w'.1 ↔ a ∉ w'.1) by
+    grind [IntFormula.not, m.closed_imp]
+  intro w'
+  grind [m.bot_not_mem w']

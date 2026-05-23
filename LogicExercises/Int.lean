@@ -12,6 +12,7 @@ inductive IntFormula : Type
 deriving Repr, DecidableEq
 
 def not (x : IntFormula) : IntFormula := IntFormula.imp x IntFormula.bot
+def iff (x y : IntFormula) : IntFormula := IntFormula.and (IntFormula.imp x y) (IntFormula.imp y x)
 
 namespace FormulaNotation
 
@@ -21,25 +22,26 @@ notation "⊥ᵢ" => IntFormula.bot
 infixr:35 " ∧ᵢ " => IntFormula.and
 infixr:30 " ∨ᵢ " => IntFormula.or
 infixr:25 " →ᵢ " => IntFormula.imp
+infixr:25 " ↔ᵢ " => iff
 
 end FormulaNotation
 
 inductive IntDerives (Γ : Set IntFormula) : IntFormula → Prop
 -- `hyp`: "hypothesis", if formula is in Γ, it derives
 | hyp {a : IntFormula} : /- ex -/ a ∈ Γ /- /ex -/ → IntDerives Γ a
-| ax0 {x : Nat} : IntDerives Γ (varᵢ x)
-| ax1 {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a)
-| ax2 {a b c : IntFormula} : IntDerives Γ ((a →ᵢ b →ᵢ c) →ᵢ (a →ᵢ b) →ᵢ a →ᵢ c)
-| ax3_1 {a b : IntFormula} : IntDerives Γ (a ∧ᵢ b →ᵢ a)
-| ax3_2 {a b : IntFormula} : IntDerives Γ (a ∧ᵢ b →ᵢ b)
-| ax4 {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a ∧ᵢ b )
-| ax5_1 {a b : IntFormula} : IntDerives Γ (a →ᵢ a ∨ᵢ b)
-| ax5_2 {a b : IntFormula} : IntDerives Γ (b →ᵢ a ∨ᵢ b )
-| ax6 {a b c : IntFormula} : IntDerives Γ ((a →ᵢ c) →ᵢ (b →ᵢ c) →ᵢ a ∨ᵢ b →ᵢ c)
-| ax7 {a b : IntFormula} : IntDerives Γ ((a →ᵢ b) →ᵢ (a →ᵢ ¬ᵢ b) →ᵢ ¬ᵢ a)
-| ax8 {a b : IntFormula} : IntDerives Γ (a →ᵢ ¬ᵢ a →ᵢ b)
+| var {x : Nat} : IntDerives Γ (varᵢ x)
+| imp_k {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a)
+| imp_s {a b c : IntFormula} : IntDerives Γ ((a →ᵢ b →ᵢ c) →ᵢ (a →ᵢ b) →ᵢ a →ᵢ c)
+| and_elim_l {a b : IntFormula} : IntDerives Γ (a ∧ᵢ b →ᵢ a)
+| and_elim_r {a b : IntFormula} : IntDerives Γ (a ∧ᵢ b →ᵢ b)
+| and_intro {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a ∧ᵢ b )
+| or_intro_l {a b : IntFormula} : IntDerives Γ (a →ᵢ a ∨ᵢ b)
+| or_intro_r {a b : IntFormula} : IntDerives Γ (b →ᵢ a ∨ᵢ b )
+| or_elim {a b c : IntFormula} : IntDerives Γ ((a →ᵢ c) →ᵢ (b →ᵢ c) →ᵢ a ∨ᵢ b →ᵢ c)
+| contra {a b : IntFormula} : IntDerives Γ ((a →ᵢ b) →ᵢ (a →ᵢ ¬ᵢ b) →ᵢ ¬ᵢ a)
+| exfalso {a b : IntFormula} : IntDerives Γ (a →ᵢ ¬ᵢ a →ᵢ b)
 -- `mp`: "modus ponens", if `a` derives and `a →ᵢ b` derives, then
--- `b` derives (all in the same context)
+-- `b` derives (all in the same context Γ)
 | mp {a b : IntFormula} : /- ex -/ IntDerives Γ a → IntDerives Γ (a →ᵢ b) → IntDerives Γ b /- /ex -/
 
 namespace DerivesNotation
@@ -48,21 +50,21 @@ infixr:20 " ⊢ᵢ " => IntDerives
 
 end DerivesNotation
 
-example {Γ : Set IntFormula} (a b c : IntFormula)
+lemma imp_andᵢ {Γ : Set IntFormula} (a b c : IntFormula)
     (h1 : Γ ⊢ᵢ a →ᵢ b →ᵢ c) (h2 : Γ ⊢ᵢ a ∧ᵢ b) :
     Γ ⊢ᵢ c := by
-  have ha : Γ ⊢ᵢ a := IntDerives.mp h2 IntDerives.ax3_1
-  have hb : Γ ⊢ᵢ b := IntDerives.mp h2 IntDerives.ax3_2
+  have ha : Γ ⊢ᵢ a := IntDerives.mp h2 IntDerives.and_elim_l
+  have hb : Γ ⊢ᵢ b := IntDerives.mp h2 IntDerives.and_elim_r
   -- ex
   exact IntDerives.mp hb (IntDerives.mp ha h1)
   -- /ex
 
-example {Γ : Set IntFormula} (a b c : IntFormula)
+lemma and_impᵢ {Γ : Set IntFormula} (a b c : IntFormula)
     (h : Γ ⊢ᵢ a ∧ᵢ b →ᵢ c) (ha : Γ ⊢ᵢ a) (hb : Γ ⊢ᵢ b) :
     Γ ⊢ᵢ c := by
   -- ex
   have hab : Γ ⊢ᵢ a ∧ᵢ b :=
-    IntDerives.mp hb (IntDerives.mp ha IntDerives.ax4)
+    IntDerives.mp hb (IntDerives.mp ha IntDerives.and_intro)
   exact IntDerives.mp hab h
   -- /ex
 
@@ -75,45 +77,45 @@ theorem Γ_ext {Γ Γ' : Set IntFormula} {a : IntFormula} :
   | hyp hb =>
     apply IntDerives.hyp
     tauto
-  | @ax0 x =>
-    exact IntDerives.ax0
-  | @ax1 a' b =>
-    exact IntDerives.ax1
-  | @ax2 a' b c =>
-    exact IntDerives.ax2
-  | @ax3_1 a' b =>
-    exact IntDerives.ax3_1
-  | @ax3_2 a' b =>
-    exact IntDerives.ax3_2
-  | @ax4 a' b =>
-    exact IntDerives.ax4
-  | @ax5_1 a' b =>
-    exact IntDerives.ax5_1
-  | @ax5_2 a' b =>
-    exact IntDerives.ax5_2
-  | @ax6 a' b =>
-    exact IntDerives.ax6
-  | @ax7 a' b =>
-    exact IntDerives.ax7
-  | @ax8 a' b =>
-    exact IntDerives.ax8
+  | @var x =>
+    exact IntDerives.var
+  | @imp_k a' b =>
+    exact IntDerives.imp_k
+  | @imp_s a' b c =>
+    exact IntDerives.imp_s
+  | @and_elim_l a' b =>
+    exact IntDerives.and_elim_l
+  | @and_elim_r a' b =>
+    exact IntDerives.and_elim_r
+  | @and_intro a' b =>
+    exact IntDerives.and_intro
+  | @or_intro_l a' b =>
+    exact IntDerives.or_intro_l
+  | @or_intro_r a' b =>
+    exact IntDerives.or_intro_r
+  | @or_elim a' b =>
+    exact IntDerives.or_elim
+  | @contra a' b =>
+    exact IntDerives.contra
+  | @exfalso a' b =>
+    exact IntDerives.exfalso
   | @mp a' b' ha' ha'b' iha ihb =>
     exact IntDerives.mp iha ihb
   -- /ex
 
 theorem imp_selfᵢ {Γ : Set IntFormula} {a : IntFormula} :
     Γ ⊢ᵢ a →ᵢ a := by
-  have ha1 : Γ ⊢ᵢ a →ᵢ a →ᵢ a := /- ex -/ IntDerives.ax1 /- /ex -/
-  have ha2 : Γ ⊢ᵢ a →ᵢ (a →ᵢ a) →ᵢ a := /- ex -/ IntDerives.ax1 /- /ex -/
+  have ha1 : Γ ⊢ᵢ a →ᵢ a →ᵢ a := /- ex -/ IntDerives.imp_k /- /ex -/
+  have ha2 : Γ ⊢ᵢ a →ᵢ (a →ᵢ a) →ᵢ a := /- ex -/ IntDerives.imp_k /- /ex -/
   apply IntDerives.mp ha1
   apply IntDerives.mp ha2
-  exact /- ex -/ IntDerives.ax2 /- /ex -/
+  exact /- ex -/ IntDerives.imp_s /- /ex -/
 
 theorem imp_trueᵢ {Γ : Set IntFormula} {a b : IntFormula} :
     (Γ ⊢ᵢ a) → (Γ ⊢ᵢ b →ᵢ a) := by
   intro h
   -- ex
-  exact IntDerives.mp h IntDerives.ax1
+  exact IntDerives.mp h IntDerives.imp_k
   -- /ex
 
 theorem deduction_revert {Γ : Set IntFormula} {a b : IntFormula} :
@@ -138,40 +140,131 @@ theorem deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
     -- ex
     · eapply IntDerives.mp
       · apply IntDerives.hyp hb
-      · apply IntDerives.ax1
+      · apply IntDerives.imp_k
     · simp only [Set.mem_singleton_iff] at hb
       rw [hb]
       exact imp_selfᵢ
     -- /ex
-  | @ax0 x =>
+  | @var x =>
     -- ex
     apply IntDerives.mp (a := (varᵢ x))
-    · exact IntDerives.ax0
-    · exact IntDerives.ax1
+    · exact IntDerives.var
+    · exact IntDerives.imp_k
     -- /ex
-  | @ax1 a' b =>
-    exact imp_trueᵢ IntDerives.ax1
-  | @ax2 a' b c =>
-    exact imp_trueᵢ IntDerives.ax2
-  | @ax3_1 a' b =>
-    exact imp_trueᵢ IntDerives.ax3_1
-  | @ax3_2 a' b =>
-    exact imp_trueᵢ IntDerives.ax3_2
-  | @ax4 a' b =>
-    exact imp_trueᵢ IntDerives.ax4
-  | @ax5_1 a' b =>
-    exact imp_trueᵢ IntDerives.ax5_1
-  | @ax5_2 a' b =>
-    exact imp_trueᵢ IntDerives.ax5_2
-  | @ax6 a' b =>
-    exact imp_trueᵢ IntDerives.ax6
-  | @ax7 a' b =>
-    exact imp_trueᵢ IntDerives.ax7
-  | @ax8 a' b =>
-    exact imp_trueᵢ IntDerives.ax8
+  | @imp_k a' b =>
+    exact imp_trueᵢ IntDerives.imp_k
+  | @imp_s a' b c =>
+    exact imp_trueᵢ IntDerives.imp_s
+  | @and_elim_l a' b =>
+    exact imp_trueᵢ IntDerives.and_elim_l
+  | @and_elim_r a' b =>
+    exact imp_trueᵢ IntDerives.and_elim_r
+  | @and_intro a' b =>
+    exact imp_trueᵢ IntDerives.and_intro
+  | @or_intro_l a' b =>
+    exact imp_trueᵢ IntDerives.or_intro_l
+  | @or_intro_r a' b =>
+    exact imp_trueᵢ IntDerives.or_intro_r
+  | @or_elim a' b =>
+    exact imp_trueᵢ IntDerives.or_elim
+  | @contra a' b =>
+    exact imp_trueᵢ IntDerives.contra
+  | @exfalso a' b =>
+    exact imp_trueᵢ IntDerives.exfalso
   | @mp a' b' ha' ha'b' iha ihb =>
     -- ex
     apply IntDerives.mp (a := a →ᵢ a') iha
     apply IntDerives.mp (a := a →ᵢ a' →ᵢ b') ihb
-    exact IntDerives.ax2
+    exact IntDerives.imp_s
     -- /ex
+
+theorem deduction_iff {Γ : Set IntFormula} {a b : IntFormula} :
+    (Γ ∪ {a} ⊢ᵢ b) ↔ (Γ ⊢ᵢ a →ᵢ b) :=
+  ⟨deduction_intro, deduction_revert⟩
+
+theorem and_embed {Γ : Set IntFormula} {a b : IntFormula} :
+    (Γ ⊢ᵢ a ∧ᵢ b) ↔ ((Γ ⊢ᵢ a) ∧ (Γ ⊢ᵢ b)) := by
+  constructor <;> intro h
+  -- ex
+  · constructor
+    · have h_and := IntDerives.and_elim_l (Γ := Γ) (a := a) (b := b)
+      exact IntDerives.mp h h_and
+    · have h_and := IntDerives.and_elim_r (Γ := Γ) (a := a) (b := b)
+      exact IntDerives.mp h h_and
+  · have h_and := IntDerives.and_intro (Γ := Γ) (a := a) (b := b)
+    apply IntDerives.mp (a := b)
+    { exact h.2 }
+    apply IntDerives.mp (a := a)
+    { exact h.1 }
+    exact h_and
+  -- /ex
+
+theorem cut {Γ : Set IntFormula} {a b : IntFormula} :
+    (Γ ⊢ᵢ a) → (Γ ∪ {a} ⊢ᵢ b) → (Γ ⊢ᵢ b) := by
+  -- ex
+  intro h h_ext
+  apply IntDerives.mp h (deduction_intro h_ext)
+  -- /ex
+
+theorem cut_set {Γ Γ' : Set IntFormula} {hΓ' : Γ'.Finite} {b : IntFormula} :
+    (Γ ∪ Γ' ⊢ᵢ b) → (∀ γ ∈ Γ', (Γ ⊢ᵢ γ)) → (Γ ⊢ᵢ b) := by
+  intro h_ext h
+  induction Γ', hΓ' using Set.Finite.induction_on with
+  | empty =>
+    -- ex
+    rw [Set.union_empty] at h_ext
+    exact h_ext
+    -- /ex
+  | @insert a s has hs ih =>
+    have ha : (Γ ⊢ᵢ a) := h a (by tauto)
+    have hb : (Γ ∪ s ⊢ᵢ b) := by
+      -- ex
+      apply IntDerives.mp (a := a)
+      · exact Γ_ext (by tauto) ha
+      · conv at h_ext =>
+          rw [← Set.union_singleton]
+          rw [← Set.union_assoc]
+          rw [deduction_iff]
+        exact h_ext
+      -- /ex
+    have hγ : (∀ γ ∈ s, Γ ⊢ᵢ γ) := by
+      -- ex
+      grind
+      -- /ex
+    exact ih hb hγ
+
+theorem and_imp_iff {Γ : Set IntFormula} {a b c : IntFormula} :
+    (Γ ⊢ᵢ a ∧ᵢ b →ᵢ c) ↔ (Γ ⊢ᵢ a →ᵢ b →ᵢ c) := by
+  calc
+    (Γ ⊢ᵢ a ∧ᵢ b →ᵢ c) ↔ (Γ ∪ {a ∧ᵢ b} ⊢ᵢ c) := Iff.symm deduction_iff
+    _ ↔ (Γ ∪ {a ∧ᵢ b} ∪ {a, b} ⊢ᵢ c) := by
+      -- ex
+      refine ⟨Γ_ext (by tauto), ?_⟩
+      intro h
+      apply cut_set h
+      · simp only [Set.mem_insert_iff, Set.mem_singleton_iff, forall_eq_or_imp, forall_eq]
+        rw [deduction_iff]
+        rw [deduction_iff]
+        exact ⟨IntDerives.and_elim_l, IntDerives.and_elim_r⟩
+      · exact Set.toFinite {a, b}
+      -- /ex
+    _ ↔ (Γ ∪ {a, b} ⊢ᵢ c) := by
+      -- ex
+      refine ⟨?_, Γ_ext (by grind)⟩
+      conv =>
+        left
+        left
+        rw [Set.union_assoc]
+        rw [Set.union_comm {a ∧ᵢ b}]
+        rw [← Set.union_assoc]
+      apply cut
+      rw [and_embed]
+      constructor <;> apply IntDerives.hyp <;> tauto
+      -- /ex
+    _ ↔ (Γ ∪ {a} ∪ {b} ⊢ᵢ c) := by
+      -- ex
+      suffices Γ ∪ {a, b} = Γ ∪ {a} ∪ {b} by grind
+      grind
+      -- /ex
+    _ ↔ (Γ ∪ {a} ⊢ᵢ b →ᵢ c) := /- ex -/ deduction_iff /- /ex -/
+    _ ↔ (Γ ⊢ᵢ a →ᵢ b →ᵢ c) := /- ex -/ deduction_iff /- /ex -/

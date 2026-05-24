@@ -16,10 +16,11 @@ inductive IntFormula : Type
 deriving Repr, DecidableEq
 
 def IntFormula.not (x : IntFormula) : IntFormula := IntFormula.imp x IntFormula.bot
-def IntFormula.iff (x y : IntFormula) : IntFormula := IntFormula.and (IntFormula.imp x y) (IntFormula.imp y x)
+def IntFormula.iff (x y : IntFormula) : IntFormula :=
+  IntFormula.and (IntFormula.imp x y) (IntFormula.imp y x)
 
 local notation "varᵢ" n => IntFormula.var n
-local notation "¬ᵢ" n => IntFormula.not n
+local prefix:40 "¬ᵢ" => IntFormula.not
 local notation "⊥ᵢ" => IntFormula.bot
 local infixr:35 " ∧ᵢ " => IntFormula.and
 local infixr:30 " ∨ᵢ " => IntFormula.or
@@ -28,7 +29,6 @@ local infixr:25 " ↔ᵢ " => IntFormula.iff
 
 inductive IntDerives (Γ : Set IntFormula) : IntFormula → Prop
 | hyp {a : IntFormula} : a ∈ Γ → IntDerives Γ a
-| var {x : Nat} : IntDerives Γ (varᵢ x)
 | imp_k {a b : IntFormula} : IntDerives Γ (a →ᵢ b →ᵢ a)
 | imp_s {a b c : IntFormula} : IntDerives Γ ((a →ᵢ b →ᵢ c) →ᵢ (a →ᵢ b) →ᵢ a →ᵢ c)
 | and_elim_l {a b : IntFormula} : IntDerives Γ (a ∧ᵢ b →ᵢ a)
@@ -88,8 +88,6 @@ theorem deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
   induction h with
   | hyp hb =>
     rcases hb with hb | hb
-    exercise
-  | @var x =>
     exercise
   | @imp_k a' b =>
     exact imp_trueᵢ IntDerives.imp_k
@@ -155,24 +153,61 @@ theorem and_imp_iff {Γ : Set IntFormula} {a b c : IntFormula} :
     _ ↔ (Γ ⊢ᵢ a →ᵢ b →ᵢ c) := exercise
 
 -- Kripke semantics
-structure IntModel : Type where
-  worlds : Set (Set IntFormula)
-  worlds_order : PartialOrder worlds
-  closed_and : ∀ w : worlds, ∀ a b : IntFormula,
-    (a ∧ᵢ b) ∈ w.1 ↔ (a ∈ w.1 ∧ b ∈ w.1)
-  closed_or : ∀ w : worlds, ∀ a b : IntFormula,
-    (a ∨ᵢ b) ∈ w.1 ↔ (a ∈ w.1 ∨ b ∈ w.1)
-  closed_imp : ∀ w : worlds, ∀ a b : IntFormula,
-    (a →ᵢ b) ∈ w.1 ↔
-    (∀ w' : worlds, w ≤ w' → a ∉ w'.1 ∨ b ∈ w'.1)
-  bot_not_mem : ∀ w : worlds, ⊥ᵢ ∉ w.1
 
-theorem closed_not (m : IntModel) :
-    ∀ w : m.worlds, ∀ a : IntFormula,
-    (¬ᵢ a) ∈ w.1 ↔
-    (∀ w' : m.worlds, w ≤ w' → a ∉ w'.1) := by
-  intro w a
-  suffices ∀ w' : m.worlds, w ≤ w' → (a ∉ w'.1 ∨ ⊥ᵢ ∈ w'.1 ↔ a ∉ w'.1) by
-    grind [IntFormula.not, m.closed_imp]
-  intro w'
-  grind [m.bot_not_mem w']
+structure IntModel : Type where
+  worlds : Set (Set Nat)
+  worlds_order : PartialOrder worlds
+  mono : ∀ w w' : worlds, w ≤ w' → w.1 ⊆ w'.1
+
+def IntModel.forces {m : IntModel} (w : m.worlds) (φ : IntFormula) : Prop :=
+  match φ with
+  | IntFormula.var x => x ∈ w.1
+  | IntFormula.and φ₁ φ₂ => IntModel.forces w φ₁ ∧ IntModel.forces w φ₂
+  | IntFormula.or φ₁ φ₂ => IntModel.forces w φ₁ ∨ IntModel.forces w φ₂
+  | IntFormula.imp φ₁ φ₂ => ∀ w' : m.worlds, w ≤ w' →
+    IntModel.forces w' φ₁ → IntModel.forces w' φ₂
+  | IntFormula.bot => False
+
+local infix:50 " ⊨ᵢ " => IntModel.forces
+
+theorem IntModel.forces_imp_self {m : IntModel} (w : m.worlds) (a b : IntFormula) :
+    (w ⊨ᵢ (a →ᵢ b)) → (w ⊨ᵢ a) → (w ⊨ᵢ b) :=
+  exercise
+
+theorem IntModel.forces_not {m : IntModel} (w : m.worlds) (φ : IntFormula) :
+    w ⊨ᵢ (¬ᵢ φ) ↔
+      ∀ w' : m.worlds, w ≤ w' → ¬ w' ⊨ᵢ φ := by
+  grind [IntModel.forces, IntFormula.not]
+
+theorem IntModel.forces_not_self {m : IntModel} (w : m.worlds) (φ : IntFormula) :
+    w ⊨ᵢ (¬ᵢ φ) → ¬ w ⊨ᵢ φ := by
+  grind [IntModel.forces_not]
+
+theorem IntModel.forces_mono {m : IntModel} {w w' : m.worlds}
+    (hww' : w ≤ w') {φ : IntFormula} :
+    (w ⊨ᵢ φ) → (w' ⊨ᵢ φ) := by
+  revert w w'
+  -- Use `induction φ`
+  exercise
+
+-- Correctness
+theorem derives_imp_model {a : IntFormula} :
+    (∅ ⊢ᵢ a) → ∀ (m : IntModel) (w : m.worlds), (w ⊨ᵢ a) := by
+  intro h
+  induction h <;>
+    grind [IntModel.forces_mono, IntModel.forces, IntModel.forces_not,
+      IntModel.forces_imp_self]
+
+def no_lem_model : IntModel := {
+  worlds := {{}, {0}}
+  worlds_order := {
+    le := fun a b => a.1 ⊆ b.1
+    le_refl := by tauto
+    le_trans := by tauto
+    le_antisymm := by grind
+  }
+  mono := by tauto
+}
+
+theorem no_lem : ∃ a : IntFormula, ¬ (∅ ⊢ᵢ a ∨ᵢ ¬ᵢ a) := by
+  exercise

@@ -60,7 +60,7 @@ theorem Γ_ext {Γ Γ' : Set IntFormula} {a : IntFormula} :
     (Γ' ⊆ Γ) → (Γ' ⊢ᵢ a) → (Γ ⊢ᵢ a) := by
   intro hΓ ha
   induction ha with
-  exercise
+  | _ => exercise
 
 theorem imp_selfᵢ {Γ : Set IntFormula} {a : IntFormula} :
     Γ ⊢ᵢ a →ᵢ a := by

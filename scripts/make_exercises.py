@@ -35,6 +35,22 @@ def format_line_replacement(indent: str, replacement: str, trailing_newline: str
     return f"{body}{trailing_newline}"
 
 
+def previous_nonempty_line(text: str, index: int) -> str:
+    for line in reversed(text[:index].splitlines()):
+        if line.strip():
+            return line
+    return ""
+
+
+def format_line_block_replacement(
+    text: str, index: int, indent: str, replacement: str, trailing_newline: str
+) -> str:
+    # After `with`, Lean expects a case alternative rather than a standalone tactic.
+    if previous_nonempty_line(text, index).rstrip().endswith("with"):
+        return format_line_replacement(indent, f"| _ => {replacement}", trailing_newline)
+    return format_line_replacement(indent, replacement, trailing_newline)
+
+
 def check_no_nested_markers(text: str, start: int, end: int, context: str) -> None:
     inline_start = text.find(INLINE_START, start, end)
     if inline_start != -1:
@@ -65,7 +81,9 @@ def replace_marked_fragments(text: str, replacement: str = DEFAULT_REPLACEMENT) 
 
                 check_no_nested_markers(text, content_start, line_end.start(), "line exercise block")
                 out.append(
-                    format_line_replacement(
+                    format_line_block_replacement(
+                        text,
+                        index,
                         line_start.group(1),
                         replacement,
                         line_end.group(1),

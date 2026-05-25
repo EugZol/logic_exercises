@@ -299,6 +299,18 @@ theorem IntModel.forces_mono {m : IntModel} {w w' : m.worlds}
   -- /ex
 
 -- Correctness
+
+@[reducible]
+def order_by_inclusion {X : Set (Set Nat)} : PartialOrder X :=  {
+    le := fun a b => a.1 ⊆ b.1
+    le_refl := by tauto
+    le_trans := by tauto
+    le_antisymm := by
+      simp only [Subtype.forall, Subtype.mk.injEq]
+      intro a ha b hb hab hba
+      grind
+  }
+
 theorem derives_imp_model {a : IntFormula} :
     (∅ ⊢ᵢ a) → ∀ (m : IntModel) (w : m.worlds), (w ⊨ᵢ a) := by
   intro h
@@ -308,12 +320,7 @@ theorem derives_imp_model {a : IntFormula} :
 
 def no_lem_model : IntModel := {
   worlds := {{}, {0}}
-  worlds_order := {
-    le := fun a b => a.1 ⊆ b.1
-    le_refl := by tauto
-    le_trans := by tauto
-    le_antisymm := by grind
-  }
+  worlds_order := order_by_inclusion
   mono := by tauto
 }
 
@@ -327,4 +334,122 @@ theorem no_lem : ∃ a : IntFormula, ¬ (∅ ⊢ᵢ a ∨ᵢ ¬ᵢ a) := by
     Subtype.mk_le_mk, Set.le_eq_subset, Set.empty_subset, forall_const, false_or] at h'
   specialize h' {0} (by tauto)
   tauto
+  -- /ex
+
+-- Exercises for derivability/non-derivability
+
+example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ (a →ᵢ b) →ᵢ ¬ᵢ a ∨ᵢ b) := by
+  -- `A` is `varᵢ 0`, `B` is `varᵢ 1`
+  exists varᵢ 0, varᵢ 1
+  -- ex
+  intro h
+  have h' := derives_imp_model h
+  -- Counter-model: `{} ---> {A, B}`
+  -- At bottom `A -> B` is forced, but
+  -- * `¬ A` is not forced because `A` is forced at the top
+  -- * `B` is not forced by definition
+  -- * hence, `¬ A ∨ B` is not forced
+  set counter_model : IntModel := {
+    worlds := {{}, {0, 1}}
+    worlds_order := order_by_inclusion
+    mono := by tauto
+  }
+  -- Providing counter-model and counter-world (bottom)
+  specialize h' counter_model ⟨{}, by tauto⟩
+  -- We have implication case of `forces` here at the root of tree:
+  -- `{} ⊨ (A → B) → (¬ A ∨ B)`,
+  -- which allows us to get any next world (including current) and get back statement that
+  -- left conjunct `A → B` holds only if right conjunct `¬ A ∨ B` holds
+  specialize h' ⟨{}, by tauto⟩ (by tauto) (by grind [IntModel.forces])
+  -- Now we have statement `{} ⊨ ¬ A ∨ B`. "Or" case of `forces` is at the root.
+  -- That case unfolds to `({} ⊨ ¬ A) OR {} ⊨ B`.
+  -- `simp` will do the unfold and get rid of `B` case automatically,
+  -- because it essentially equivalent to `B ∈ ∅`, which is obviously false.
+  simp only [IntModel.forces, Set.mem_empty_iff_false, or_false] at h'
+  -- Now we have statement `{} ⊨ ¬ A`. Again, that is implication in disguise,
+  -- so we can provide any next world and get back statement that `¬ A` holds in
+  -- that world as well.
+  specialize h' ⟨{0, 1}, by tauto⟩ (by tauto) (by grind [IntModel.forces])
+  -- Finally at h' we have `{A, B} ⊨ ⊥`, which is `False` by construction of `forces`
+  -- `simp` or `tauto` will unfold `forces` and close the goal.
+  simp [IntModel.forces] at h'
+  -- /ex
+
+lemma not_a_b_imp_a_b : ∀ a b : IntFormula, (∅ ⊢ᵢ ¬ᵢ a ∨ᵢ b →ᵢ (a →ᵢ b)) := by
+  -- ex
+  intro a b
+  have or_elim : ∅ ⊢ᵢ (¬ᵢa →ᵢ a →ᵢ b) →ᵢ (b →ᵢ a →ᵢ b) →ᵢ ¬ᵢa ∨ᵢ b →ᵢ a →ᵢ b :=
+    IntDerives.or_elim (Γ := ∅) (a := ¬ᵢ a) (b := b) (c := a →ᵢ b)
+  have exfalso_alt : ∅ ⊢ᵢ (¬ᵢa →ᵢ a →ᵢ b) := by
+    apply deduction_intro
+    apply deduction_intro
+    rw [Set.union_assoc]
+    rw [Set.union_comm {¬ᵢ a}]
+    rw [← Set.union_assoc]
+    apply deduction_revert
+    apply deduction_revert
+    exact IntDerives.exfalso
+  have imp_k : ∅ ⊢ᵢ b →ᵢ a →ᵢ b := IntDerives.imp_k
+  grind [IntDerives.mp]
+  -- /ex
+
+example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ ¬ᵢ (a ∧ᵢ b) →ᵢ ¬ᵢ a ∨ᵢ ¬ᵢ b) := by
+  exists varᵢ 0, varᵢ 1
+  intro h
+  have h' := derives_imp_model h
+  -- A B
+  -- \/
+  -- {}
+  set counter_model : IntModel := {
+    worlds := {{}, {0}, {1}}
+    worlds_order := order_by_inclusion
+    mono := by tauto
+  }
+  -- ex
+  have w_unfold : ∀ (w : counter_model.worlds), w.1 ∈ ({∅, {0}, {1}} : Set (Set Nat)) := by
+    simp [counter_model]
+  have bot_not_a_not_b : (⟨∅, by tauto⟩ : counter_model.worlds) ⊨ᵢ (¬ᵢ((varᵢ 0) ∧ᵢ varᵢ 1)) := by
+    intro w hr contra
+    grind [IntModel.forces]
+  specialize h' counter_model ⟨{}, by tauto⟩
+  specialize h' ⟨{}, _⟩ (by tauto) bot_not_a_not_b
+  rcases h' with h' | h'
+  · specialize h' ⟨{0}, by tauto⟩ (by tauto) (by tauto)
+    simp only [IntModel.forces] at h'
+  · specialize h' ⟨{1}, by tauto⟩ (by tauto) (by tauto)
+    simp only [IntModel.forces] at h'
+  -- /ex
+
+example : ∀ a b : IntFormula, (∅ ⊢ᵢ ¬ᵢ a ∨ᵢ ¬ᵢ b →ᵢ ¬ᵢ (a ∧ᵢ b)) := by
+  -- ex
+  intro a b
+  have h := not_a_b_imp_a_b (a := a) (b := ¬ᵢ b)
+  apply deduction_revert at h
+  apply deduction_intro
+  conv =>
+    right
+    simp [IntFormula.not]
+  rw [and_imp_iff]
+  exact h
+  -- /ex
+
+example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ ¬ᵢ (a →ᵢ b) →ᵢ a ∧ᵢ ¬ᵢ b) := by
+  -- ex
+  sorry
+  -- /ex
+
+example : ∀ a b : IntFormula, (∅ ⊢ᵢ a ∧ᵢ ¬ᵢb →ᵢ ¬ᵢ(a →ᵢ b)) := by
+  -- ex
+  intro a b
+  rw [and_imp_iff]
+  apply deduction_intro
+  apply deduction_intro
+  apply deduction_intro
+  have h1 : ∅ ∪ {a} ∪ {¬ᵢb} ∪ {a →ᵢ b} ⊢ᵢ b := by
+    apply IntDerives.mp (a := a) (IntDerives.hyp _) (IntDerives.hyp _) <;>
+      grind
+  have h2 : ∅ ∪ {a} ∪ {¬ᵢb} ∪ {a →ᵢ b} ⊢ᵢ b →ᵢ ¬ᵢb →ᵢ ⊥ᵢ :=
+    IntDerives.exfalso
+  have h3 : ∅ ∪ {a} ∪ {¬ᵢb} ∪ {a →ᵢ b} ⊢ᵢ ¬ᵢb →ᵢ ⊥ᵢ := IntDerives.mp h1 h2
+  apply IntDerives.mp (a := ¬ᵢb) (IntDerives.hyp (by grind)) h3
   -- /ex

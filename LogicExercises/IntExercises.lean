@@ -191,6 +191,18 @@ theorem IntModel.forces_mono {m : IntModel} {w w' : m.worlds}
   exercise
 
 -- Correctness
+
+@[reducible]
+def order_by_inclusion {X : Set (Set Nat)} : PartialOrder X :=  {
+    le := fun a b => a.1 ⊆ b.1
+    le_refl := by tauto
+    le_trans := by tauto
+    le_antisymm := by
+      simp only [Subtype.forall, Subtype.mk.injEq]
+      intro a ha b hb hab hba
+      grind
+  }
+
 theorem derives_imp_model {a : IntFormula} :
     (∅ ⊢ᵢ a) → ∀ (m : IntModel) (w : m.worlds), (w ⊨ᵢ a) := by
   intro h
@@ -200,14 +212,42 @@ theorem derives_imp_model {a : IntFormula} :
 
 def no_lem_model : IntModel := {
   worlds := {{}, {0}}
-  worlds_order := {
-    le := fun a b => a.1 ⊆ b.1
-    le_refl := by tauto
-    le_trans := by tauto
-    le_antisymm := by grind
-  }
+  worlds_order := order_by_inclusion
   mono := by tauto
 }
 
 theorem no_lem : ∃ a : IntFormula, ¬ (∅ ⊢ᵢ a ∨ᵢ ¬ᵢ a) := by
+  exercise
+
+-- Exercises for derivability/non-derivability
+
+example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ (a →ᵢ b) →ᵢ ¬ᵢ a ∨ᵢ b) := by
+  -- `A` is `varᵢ 0`, `B` is `varᵢ 1`
+  exists varᵢ 0, varᵢ 1
+  exercise
+
+lemma not_a_b_imp_a_b : ∀ a b : IntFormula, (∅ ⊢ᵢ ¬ᵢ a ∨ᵢ b →ᵢ (a →ᵢ b)) := by
+  exercise
+
+example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ ¬ᵢ (a ∧ᵢ b) →ᵢ ¬ᵢ a ∨ᵢ ¬ᵢ b) := by
+  exists varᵢ 0, varᵢ 1
+  intro h
+  have h' := derives_imp_model h
+  -- A B
+  -- \/
+  -- {}
+  set counter_model : IntModel := {
+    worlds := {{}, {0}, {1}}
+    worlds_order := order_by_inclusion
+    mono := by tauto
+  }
+  exercise
+
+example : ∀ a b : IntFormula, (∅ ⊢ᵢ ¬ᵢ a ∨ᵢ ¬ᵢ b →ᵢ ¬ᵢ (a ∧ᵢ b)) := by
+  exercise
+
+example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ ¬ᵢ (a →ᵢ b) →ᵢ a ∧ᵢ ¬ᵢ b) := by
+  exercise
+
+example : ∀ a b : IntFormula, (∅ ⊢ᵢ a ∧ᵢ ¬ᵢb →ᵢ ¬ᵢ(a →ᵢ b)) := by
   exercise

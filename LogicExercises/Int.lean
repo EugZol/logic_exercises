@@ -435,7 +435,36 @@ example : ∀ a b : IntFormula, (∅ ⊢ᵢ ¬ᵢ a ∨ᵢ ¬ᵢ b →ᵢ ¬ᵢ 
 
 example : ∃ a b : IntFormula, ¬ (∅ ⊢ᵢ ¬ᵢ (a →ᵢ b) →ᵢ a ∧ᵢ ¬ᵢ b) := by
   -- ex
-  sorry
+  exists varᵢ 0, varᵢ 1
+  intro h
+  have h' := derives_imp_model h
+  specialize h' no_lem_model ⟨{}, by tauto⟩
+  have w_unfold : ∀ (w : no_lem_model.worlds), w.1 ∈ ({∅, {0}} : Set (Set Nat)) := by
+    simp [no_lem_model]
+  have no_a_imp_b_top : (⟨{0}, by tauto⟩ : no_lem_model.worlds) ⊨ᵢ (¬ᵢ((varᵢ 0) →ᵢ varᵢ 1)) := by
+    intro w' hww'
+    have h : {0} ⊆ w'.1 := hww'
+    specialize w_unfold w'
+    have h : {0} = w'.1 := by
+      cases w_unfold <;> grind
+    intro hw'
+    specialize hw' w' (by tauto) (by tauto)
+    simp only [IntModel.forces] at hw'
+    grind only [Set.mem_singleton_iff]
+  have no_a_imp_b_bot : (⟨{}, by tauto⟩ : no_lem_model.worlds) ⊨ᵢ (¬ᵢ((varᵢ 0) →ᵢ varᵢ 1)) := by
+    intro w' hww'
+    specialize w_unfold w'
+    rcases w_unfold with w_unfold | w_unfold
+    · intro hw'
+      specialize hw' ⟨{0}, by tauto⟩
+      specialize hw' (show w'.1 ⊆ {0} by grind) (by tauto)
+      simp only [IntModel.forces] at hw'
+      tauto
+    · apply no_a_imp_b_top
+      grind only [Set.mem_singleton_iff]
+  specialize h' ⟨{}, _⟩ (by tauto) no_a_imp_b_bot
+  simp only [IntModel.forces] at h'
+  tauto
   -- /ex
 
 example : ∀ a b : IntFormula, (∅ ⊢ᵢ a ∧ᵢ ¬ᵢb →ᵢ ¬ᵢ(a →ᵢ b)) := by

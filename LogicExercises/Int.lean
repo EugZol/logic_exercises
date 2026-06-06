@@ -749,72 +749,147 @@ theorem GentzDerives.and_inversion {Γ : Set IntFormula} {a b c : IntFormula} :
     GentzDerives (Γ ∪ {a} ∪ {b}) c :=
   GentzDerives.and_inversion_aux (fun _ x => x)
 
-theorem GentzDerives.cut_aux {Γ Δ : Set IntFormula} {a b : IntFormula} :
+theorem GentzDerives.and_r_inversion_aux {Δ Γ : Set IntFormula} {a b : IntFormula} :
+    Δ ⊆ Γ →
+    GentzDerives Δ (a ∧ᵢ b) →
+    GentzDerives Γ a ∧ GentzDerives Γ b := by
+  intro hΔ hab
+  generalize hab' : (a ∧ᵢ b) = c at hab
+  induction hab generalizing Γ a b with
+  | @id Γ' a' =>
+    -- ex
+    grind [GentzDerives.mono, GentzDerives.and_l, GentzDerives.hyp]
+    -- /ex
+  | @exfalso =>
+    -- ex
+    grind [GentzDerives.exfalso_in]
+    -- /ex
+  | @or_l Γ' a' b' c ha' hb' iha ihb =>
+    -- ex
+    subst hab'
+    specialize @iha (Γ ∪ {a'}) a b (by grind) rfl
+    specialize @ihb (Γ ∪ {b'}) a b (by grind) rfl
+    have hΓ : Γ = Γ ∪ {a' ∨ᵢ b'} := by grind
+    grind [GentzDerives.or_l]
+    -- /ex
+  | @or_r_1 Γ' a' b' ha iha =>
+    -- ex
+    grind only [GentzDerives.or_r_1]
+    -- /ex
+  | @or_r_2 Γ' a' b' hb ihb =>
+    -- ex
+    grind only [GentzDerives.or_r_2]
+    -- /ex
+  | @and_l Γ' a' b' c hc ih =>
+    -- ex
+    specialize @ih (Γ ∪ {a'} ∪ {b'}) a b
+    have : Γ = Γ ∪ {a' ∧ᵢ b'} := by grind
+    grind [GentzDerives.and_l]
+    -- /ex
+  | @and_r Γ' a' b' ha hb iha ihb =>
+    -- ex
+    grind [GentzDerives.mono]
+    -- /ex
+  | @imp_l Γ' a' b' c ha hc iha ihc =>
+    -- ex
+    have hΓ : Γ = Γ ∪ {a' →ᵢ b'} := by grind
+    specialize @ihc (Γ ∪ {b'}) a b
+    grind [GentzDerives.imp_l, GentzDerives.mono]
+    -- /ex
+  | @imp_r Γ' a' b' h ih =>
+    -- ex
+    injection hab'
+    -- /ex
+
+theorem GentzDerives.and_r_inversion {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives Γ (a ∧ᵢ b) →
+    GentzDerives Γ a ∧ GentzDerives Γ b :=
+  GentzDerives.and_r_inversion_aux (fun _ x => x)
+
+theorem GentzDerives.cut_aux
+    {Γ Δ : Set IntFormula} {a b : IntFormula} :
     Δ ⊆ Γ →
     GentzDerives Δ a →
     GentzDerives (Γ ∪ {a}) b →
     GentzDerives Γ b := by
   induction a generalizing Γ Δ b with
-  | @var x =>
+  | var x =>
     intro hΔ ha hb
+    generalize hag : (varᵢ x) = a at ha
+    induction ha generalizing Γ Θ b with
+    | @id Γ' a' =>
+      have hΓ : Γ = Γ ∪ {varᵢ x} := by grind
+      grind [GentzDerives.mono]
+    | @exfalso => exact GentzDerives.exfalso_in (by grind)
+    | @or_l Γ' a' b' c ha' hb' iha ihb =>
+      subst hag
+      specialize iha (Γ := Γ ∪ {a'}) (b := b) (by grind)
+        (by grind) hb rfl
+      specialize ihb (Γ := Γ ∪ {b'}) (Θ := Θ) (b := b) (by grind)
+        (by grind) hb rfl
+      rw [show Γ = Γ ∪ {a' ∨ᵢ b'} by grind]
+      exact GentzDerives.or_l iha ihb
+    | @or_r_1 => injection hag
+    | @or_r_2 => injection hag
+    | @and_l Γ' a' b' c hc ih =>
+      subst hag
+      specialize ih (Γ := Γ ∪ {a'} ∪ {b'}) (Θ := Θ) (b := b) (by grind)
+        (by grind) hb rfl
+      rw [show Γ = Γ ∪ {a' ∧ᵢ b'} by grind]
+      exact GentzDerives.and_l ih
+    | @and_r => injection hag
+    | @imp_l Γ' a' b' c ha hc iha ihc =>
+      subst hag
+      rw [show Γ = Γ ∪ {a' →ᵢ b'} by grind]
+      specialize ihc (Γ := Γ ∪ {b'})  (Θ := Θ) (b := b) (by grind)
+        (by grind) hb rfl
+      apply GentzDerives.imp_l ?_ ihc
+      apply GentzDerives.mono (by grind) ha
+    | @imp_r => injection hag
+  | and a' b' iha ihb =>
+    intro hΔ ha hb
+    generalize hag : (a' ∧ᵢ b') = a at ha
+    induction ha generalizing Γ b with
+    | @id Γ' a'' =>
+      have hΓ : Γ = Γ ∪ {a' ∧ᵢ b'} := by grind
+      grind [GentzDerives.mono]
+    | @exfalso => exact GentzDerives.exfalso_in (by grind)
+    | @or_l Γ' a'' b'' c ha'' hb'' iha' ihb' =>
+      subst hag
+      rw [show Γ = Γ ∪ {a'' ∨ᵢ b''} by grind]
+      apply GentzDerives.or_l
+      · have : GentzDerives (Γ ∪ {a''} ∪ {a' ∧ᵢ b'}) b := by
+          rw [set_comm_3]
+          apply GentzDerives.mono (by grind) hb
+        specialize @iha' (Γ ∪ {a''}) b (by grind) (by assumption) rfl
+        exact iha'
+      · have : GentzDerives (Γ ∪ {b''} ∪ {a' ∧ᵢ b'}) b := by
+          rw [set_comm_3]
+          apply GentzDerives.mono (by grind) hb
+        specialize @ihb' (Γ ∪ {b''}) b (by grind) (by assumption) rfl
+        exact ihb'
+    | @or_r_1 => injection hag
+    | @or_r_2 => injection hag
+    | @and_l Γ' a'' b'' c hc ih =>
+      subst hag
+      have : GentzDerives (Γ ∪ {a''} ∪ {b''} ∪ {a' ∧ᵢ b'}) b := by
+        rw [show Γ ∪ {a''} ∪ {b''} ∪ {a' ∧ᵢ b'} = Γ ∪ {a' ∧ᵢ b'} ∪ {a''} ∪ {b''} by grind]
+        apply GentzDerives.mono (by grind) hb
+      specialize @ih (Γ ∪ {a''} ∪ {b''}) b (by grind) (by assumption) rfl
+      rw [show Γ = Γ ∪ {a'' ∧ᵢ b''} by grind]
+      apply GentzDerives.and_l ih
+    | @and_r Γ' a'' b'' ha'' hb'' iha'' ihb'' =>
+      injection hag with haeq hbeq
+      subst haeq hbeq
 
-
-
-  induction ha generalizing Γ b with
-  | @id Γ' a' =>
-    -- ex
-
-    apply GentzDerives.weaken hb
-    -- /ex
-  | @exfalso Γ' a' =>
-    -- ex
-    apply GentzDerives.exfalso_in
-    grind
-    -- /ex
-  | @or_l Γ' a' b' c ha' hb' iha ihb =>
-    -- ex
-    apply GentzDerives.mono hΔ
-    apply GentzDerives.or_l
-    rw [set_comm_3] at hb
-    apply GentzDerives.or_inversion at hb
-    · specialize iha (Γ := Γ' ∪ {a'} ∪ {a' ∨ᵢ b'}) (b := b) (by grind) (by grind)
-      apply GentzDerives.or_inversion at iha
-      rw [show Γ' ∪ {a'} = Γ' ∪ {a'} ∪ {a'} by grind]
-      exact iha.1
-    · specialize ihb (Γ := Γ' ∪ {b'} ∪ {a' ∨ᵢ b'}) (b := b) (by grind) (by grind)
-      apply GentzDerives.or_inversion at ihb
-      rw [show Γ' ∪ {b'} = Γ' ∪ {b'} ∪ {b'} by grind]
-      exact ihb.2
-    -- /ex
-  | @or_r_1 Γ' a' b' ha iha =>
-    -- ex
-    apply GentzDerives.mono hΔ
-    apply iha (by tauto)
-    exact (GentzDerives.or_inversion hb).1
-    -- /ex
-  | @or_r_2 Γ' a' b' hb ihb =>
-    -- ex
-    apply GentzDerives.mono hΔ
-    apply ihb (by tauto)
-    exact (GentzDerives.or_inversion hb).2
-    -- /ex
-  | @and_l Γ' a' b' c hc ih =>
-    -- ex
-    rw [set_comm_3] at hb
-    apply GentzDerives.and_inversion at hb
-    specialize ih (Γ := Γ' ∪ {a'} ∪ {b'}) (b := b) (by grind) (by grind)
-    apply GentzDerives.mono hΔ
-    apply GentzDerives.and_l
-    have hΓ : Γ' ∪ {a'} ∪ {b'} ⊆ Γ ∪ {a'} ∪ {b'} := by grind
-    exact ih (by grind)
-    -- /ex
-  | @and_r Γ' a' b' ha hb iha ihb =>
-    -- ex
-    apply GentzDerives.and_inversion at hb
-    specialize iha (Γ := Γ ∪ {b'}) (b := b) (by tauto) (by grind only)
-    specialize ihb (Γ := Γ) (b := b) (by tauto) iha
-    exact ihb
-    -- /ex
+      have : GentzDerives (Γ ∪ {a'} ∪ {a' ∧ᵢ b'}) b :=
+        GentzDerives.mono (Γ := Γ ∪ {a' ∧ᵢ b'}) (by grind) hb
+      specialize @iha (Γ ∪ {a'}) Γ' b (by grind) (by assumption)
+    | @imp_l Γ' a' b' c ha hc iha ihc =>
+      specialize ihc (Γ := Γ ∪ {b'})  (Θ := Θ) (b := b)
+      have : Γ = Γ ∪ {a' →ᵢ b'} := by grind
+      grind [GentzDerives.imp_l, GentzDerives.mono]
+    | @imp_r => injection hag
 
 -- theorem not_derives_imp_counter_model {a : IntFormula} :
 --     ¬ (∅ ⊢ᵢ a) → ∃ (m : IntModel) (w : m.worlds), ¬ (w ⊨ᵢ a) := by

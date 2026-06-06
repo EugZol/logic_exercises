@@ -658,24 +658,164 @@ theorem GentzDerives.or_inversion_aux {Δ Γ : Set IntFormula} {a b c : IntFormu
     -- /ex
 
 theorem GentzDerives.or_inversion {Γ : Set IntFormula} {a b c : IntFormula} :
-    GentzDerives (Γ ∪ {a ∨ᵢ b}) c → GentzDerives (Γ ∪ {a}) c ∧ GentzDerives (Γ ∪ {b}) c := by
-  exact GentzDerives.or_inversion_aux (by intro x hx; exact hx)
+    GentzDerives (Γ ∪ {a ∨ᵢ b}) c → GentzDerives (Γ ∪ {a}) c ∧ GentzDerives (Γ ∪ {b}) c :=
+  GentzDerives.or_inversion_aux (fun _ x => x)
 
-theorem GentzDerives.cut {Γ : Set IntFormula} {a b : IntFormula} :
-    GentzDerives Γ a → GentzDerives (Γ ∪ {a}) b → GentzDerives Γ b := by
-  intro ha
-  induction ha with
-  | @id Γ' a' =>
-    rw [Set.union_assoc]
-    rw [show {(a' : IntFormula)} ∪ {(a' : IntFormula)} = {a'} by grind]
-    tauto
-  | @exfalso Γ' a' =>
-    intro
-    exact exfalso
+theorem GentzDerives.and_inversion_aux {Δ Γ : Set IntFormula} {a b c : IntFormula} :
+    Δ ⊆ Γ ∪ {a ∧ᵢ b} →
+    GentzDerives Δ c →
+    GentzDerives (Γ ∪ {a} ∪ {b}) c := by
+  intro hΔ hc
+  induction hc generalizing Γ a b with
+  | @id Γ' c =>
+    -- ex
+    have h : {c} ⊆ Γ ∪ {a ∧ᵢ b} := by grind
+    simp only [Set.union_singleton, Set.singleton_subset_iff] at h
+    rcases h with h | h
+    · subst h
+      apply GentzDerives.and_r <;> apply GentzDerives.hyp <;> grind
+    · apply GentzDerives.hyp
+      grind
+    -- /ex
+  | @exfalso Γ' c =>
+    -- ex
+    have h : {⊥ᵢ} ⊆ Γ ∪ {a ∧ᵢ b} := by grind
+    simp only [Set.union_singleton] at h
+    apply GentzDerives.exfalso_in
+    grind
+    -- /ex
   | @or_l Γ' a' b' c ha' hb' iha ihb =>
-    intro h
-    rw [set_comm_3] at h
+    have h : {a' ∨ᵢ b'} ⊆ Γ ∪ {a ∧ᵢ b} := by grind
+    simp only [Set.union_singleton, Set.singleton_subset_iff, Set.mem_insert_iff] at h
+    rcases h with ⟨_, _⟩ | h
+    -- ex
+    have h_or : Γ ∪ {a' ∨ᵢ b'} = Γ := by grind
+    have hΓ : Γ' ⊆ Γ ∪ {a ∧ᵢ b} := by grind
+    rw [← h_or]
+    rw [show Γ ∪ {a' ∨ᵢ b'} ∪ {a} ∪ {b} = Γ ∪ {a} ∪ {b} ∪ {a' ∨ᵢ b'} by grind]
+    apply GentzDerives.or_l
+    · specialize iha (Γ := Γ ∪ {a'}) (a := a) (b := b) (by grind)
+      grind only
+    · specialize ihb (Γ := Γ ∪ {b'}) (a := a) (b := b) (by grind)
+      grind only
+    -- /ex
+  | @or_r_1 Γ' a' b' ha iha =>
+    -- ex
+    grind only [GentzDerives.or_r_1]
+    -- /ex
+  | @or_r_2 Γ' a' b' hb ihb =>
+    -- ex
+    grind only [GentzDerives.or_r_2]
+    -- /ex
+  | @and_l Γ' a' b' c hc ih =>
+    -- ex
+    have h_and : (a' ∧ᵢ b') ∈ Γ ∪ {a ∧ᵢ b} := by grind
+    rcases h_and with h_and | ⟨ha, hb⟩
+    · have : Γ' ⊆ Γ ∪ {a ∧ᵢ b} := by grind
+      specialize ih (Γ := Γ ∪ {a'} ∪ {b'}) (a := a) (b := b) (by grind)
+      have ih : GentzDerives (Γ ∪ {a} ∪ {b} ∪ {a' ∧ᵢ b'}) c := by grind [GentzDerives.and_l]
+      have : Γ ∪ {a' ∧ᵢ b'} = Γ := by grind
+      grind only
+    · have : Γ' ⊆ Γ ∪ {a' ∧ᵢ b'} := by grind
+      specialize ih (Γ := Γ ∪ {a'} ∪ {b'}) (a := a') (b := b') (by grind)
+      rw [show Γ ∪ {a'} ∪ {b'} ∪ {a'} ∪ {b'} = Γ ∪ {a'} ∪ {b'} by grind] at ih
+      exact ih
+    -- /ex
+  | @and_r Γ' a' b' ha hb iha ihb =>
+    -- ex
+    grind only [GentzDerives.and_r]
+    -- /ex
+  | @imp_l Γ' a' b' c ha hc iha ihc =>
+    have h : {a' →ᵢ b'} ⊆ Γ ∪ {a ∧ᵢ b} := by grind
+    simp only [Set.union_singleton, Set.singleton_subset_iff, Set.mem_insert_iff] at h
+    rcases h with h | h
+    { injection h }
+    -- ex
+    specialize ihc (Γ := Γ ∪ {b'}) (a := a) (b := b) (by grind)
+    rw [show Γ ∪ {b'} ∪ {a} ∪ {b} = Γ ∪ {a} ∪ {b} ∪ {b'} by grind] at ihc
+    specialize iha (Γ := Γ) (a := a) (b := b) (by grind)
+    rw [show Γ ∪ {a} ∪ {b} = Γ ∪ {a} ∪ {b} ∪ {a' →ᵢ b'} by grind]
+    apply GentzDerives.imp_l iha ihc
+    -- /ex
+  | @imp_r Γ' a' b' h ih =>
+    -- ex
+    apply GentzDerives.imp_r
+    specialize ih (Γ := Γ ∪ {a'}) (a := a) (b := b) (by grind)
+    grind only
+    -- /ex
 
-theorem not_derives_imp_counter_model {a : IntFormula} :
-    ¬ (∅ ⊢ᵢ a) → ∃ (m : IntModel) (w : m.worlds), ¬ (w ⊨ᵢ a) := by
-  sorry
+theorem GentzDerives.and_inversion {Γ : Set IntFormula} {a b c : IntFormula} :
+    GentzDerives (Γ ∪ {a ∧ᵢ b}) c →
+    GentzDerives (Γ ∪ {a} ∪ {b}) c :=
+  GentzDerives.and_inversion_aux (fun _ x => x)
+
+theorem GentzDerives.cut_aux {Γ Δ : Set IntFormula} {a b : IntFormula} :
+    Δ ⊆ Γ →
+    GentzDerives Δ a →
+    GentzDerives (Γ ∪ {a}) b →
+    GentzDerives Γ b := by
+  induction a generalizing Γ Δ b with
+  | @var x =>
+    intro hΔ ha hb
+
+
+
+  induction ha generalizing Γ b with
+  | @id Γ' a' =>
+    -- ex
+
+    apply GentzDerives.weaken hb
+    -- /ex
+  | @exfalso Γ' a' =>
+    -- ex
+    apply GentzDerives.exfalso_in
+    grind
+    -- /ex
+  | @or_l Γ' a' b' c ha' hb' iha ihb =>
+    -- ex
+    apply GentzDerives.mono hΔ
+    apply GentzDerives.or_l
+    rw [set_comm_3] at hb
+    apply GentzDerives.or_inversion at hb
+    · specialize iha (Γ := Γ' ∪ {a'} ∪ {a' ∨ᵢ b'}) (b := b) (by grind) (by grind)
+      apply GentzDerives.or_inversion at iha
+      rw [show Γ' ∪ {a'} = Γ' ∪ {a'} ∪ {a'} by grind]
+      exact iha.1
+    · specialize ihb (Γ := Γ' ∪ {b'} ∪ {a' ∨ᵢ b'}) (b := b) (by grind) (by grind)
+      apply GentzDerives.or_inversion at ihb
+      rw [show Γ' ∪ {b'} = Γ' ∪ {b'} ∪ {b'} by grind]
+      exact ihb.2
+    -- /ex
+  | @or_r_1 Γ' a' b' ha iha =>
+    -- ex
+    apply GentzDerives.mono hΔ
+    apply iha (by tauto)
+    exact (GentzDerives.or_inversion hb).1
+    -- /ex
+  | @or_r_2 Γ' a' b' hb ihb =>
+    -- ex
+    apply GentzDerives.mono hΔ
+    apply ihb (by tauto)
+    exact (GentzDerives.or_inversion hb).2
+    -- /ex
+  | @and_l Γ' a' b' c hc ih =>
+    -- ex
+    rw [set_comm_3] at hb
+    apply GentzDerives.and_inversion at hb
+    specialize ih (Γ := Γ' ∪ {a'} ∪ {b'}) (b := b) (by grind) (by grind)
+    apply GentzDerives.mono hΔ
+    apply GentzDerives.and_l
+    have hΓ : Γ' ∪ {a'} ∪ {b'} ⊆ Γ ∪ {a'} ∪ {b'} := by grind
+    exact ih (by grind)
+    -- /ex
+  | @and_r Γ' a' b' ha hb iha ihb =>
+    -- ex
+    apply GentzDerives.and_inversion at hb
+    specialize iha (Γ := Γ ∪ {b'}) (b := b) (by tauto) (by grind only)
+    specialize ihb (Γ := Γ) (b := b) (by tauto) iha
+    exact ihb
+    -- /ex
+
+-- theorem not_derives_imp_counter_model {a : IntFormula} :
+--     ¬ (∅ ⊢ᵢ a) → ∃ (m : IntModel) (w : m.worlds), ¬ (w ⊨ᵢ a) := by
+--   sorry

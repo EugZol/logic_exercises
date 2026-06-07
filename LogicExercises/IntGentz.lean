@@ -629,7 +629,6 @@ lemma GentzDerives.cut_aux_imp_case (a' b' : IntFormula)
   | @imp_r Γ' a'' b'' ha'' iha'' =>
     cases hag
 
-
 theorem GentzDerives.cut_aux
     {Γ Δ : Set IntFormula} {a b : IntFormula} :
     Δ ⊆ Γ →

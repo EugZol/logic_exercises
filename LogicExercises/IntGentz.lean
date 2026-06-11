@@ -407,6 +407,43 @@ theorem GentzDerives.imp_inversion {Γ : Set IntFormula} {a b c : IntFormula} :
     GentzDerives (Γ ∪ {b}) c :=
   GentzDerives.imp_inversion_aux (fun _ x => x)
 
+theorem GentzDerives.bot_inversion_aux {Δ Γ : Set IntFormula} {a : IntFormula} :
+    Δ ⊆ Γ →
+    GentzDerives Δ ⊥ᵢ →
+    GentzDerives Γ a := by
+  intro hΔ hb
+  generalize hb' : ⊥ᵢ = b at hb
+  induction hb generalizing Γ a with
+  | @id Γ' a' =>
+    apply GentzDerives.exfalso_in (by grind)
+  | @exfalso => exact GentzDerives.exfalso_in (by grind)
+  | @or_l Γ' a' b' c ha' hb' iha ihb =>
+    subst hb'
+    rw [show Γ = Γ ∪ {a' ∨ᵢ b'} by grind]
+    specialize @iha (Γ ∪ {a'}) a (by grind) rfl
+    specialize @ihb (Γ ∪ {b'}) a (by grind) rfl
+    exact GentzDerives.or_l iha ihb
+  | @or_r_1 => injection hb'
+  | @or_r_2 => injection hb'
+  | @and_l Γ' a' b' c hc ih =>
+    subst hb'
+    rw [show Γ = Γ ∪ {a' ∧ᵢ b'} by grind]
+    apply GentzDerives.and_l
+    exact @ih (Γ ∪ {a'} ∪ {b'}) a (by grind) rfl
+  | @and_r => injection hb'
+  | @imp_l Γ' a' b' c ha hc iha ihc =>
+    subst hb'
+    rw [show Γ = Γ ∪ {a' →ᵢ b'} by grind]
+    apply GentzDerives.imp_l
+    · apply GentzDerives.mono (show Γ' ⊆ Γ by grind) ha
+    · apply ihc (by grind) rfl
+  | @imp_r => injection hb'
+
+theorem GentzDerives.bot_inversion {Γ : Set IntFormula} {a : IntFormula} :
+    GentzDerives Γ ⊥ᵢ →
+    GentzDerives Γ a :=
+  GentzDerives.bot_inversion_aux (fun _ x => x)
+
 -- Extracting parts of GentzDerives.cut_aux for performance
 
 lemma GentzDerives.cut_aux_var_case (x : ℕ) (Γ Δ : Set IntFormula) (b : IntFormula) :
@@ -574,6 +611,106 @@ lemma GentzDerives.cut_aux_or_case (a' b' : IntFormula)
       apply ihc' (by grind) rfl
   | @imp_r => injection hag
 
+lemma GentzDerives.cut_aux_imp_imp_r_case {Θ Γ Δ : Set IntFormula} {a b c : IntFormula}
+    (iha : ∀ {Γ Δ : Set IntFormula} {c : IntFormula},
+      Δ ⊆ Γ → GentzDerives Δ a →
+      GentzDerives (Γ ∪ {a}) c → GentzDerives Γ c)
+    (ihb : ∀ {Γ Δ : Set IntFormula} {c : IntFormula},
+      Δ ⊆ Γ → GentzDerives Δ b →
+      GentzDerives (Γ ∪ {b}) c → GentzDerives Γ c) :
+    Θ ⊆ Γ ∪ {a →ᵢ b} →
+    Δ ⊆ Γ →
+    GentzDerives (Δ ∪ {a}) b →
+    GentzDerives Θ c →
+    GentzDerives Γ c := by
+  intro hΘ hΔ hab hc
+  induction hc generalizing Γ Δ with
+  | @id Γ' a' =>
+    have h : a' ∈ Γ ∪ {a →ᵢ b} := by grind
+    rcases h with h | h
+    · exact GentzDerives.hyp h
+    · rw [h]
+      apply GentzDerives.imp_r
+      apply GentzDerives.mono (show Δ ∪ {a} ⊆ Γ ∪ {a} by grind) hab
+  | @exfalso Γ' a' =>
+    have h : ⊥ᵢ ∈ Γ ∪ {a →ᵢ b} := by grind
+    rcases h with h | h
+    · exact GentzDerives.exfalso_in h
+    · injection h
+  | @or_l Γ' a' b' c ha' hb' iha' ihb' =>
+    have h : (a' ∨ᵢ b') ∈ Γ ∪ {a →ᵢ b} := by
+      clear iha ihb iha' ihb'
+      grind
+    rcases h with h | h
+    · clear iha ihb
+      have : Γ = Γ ∪ {a' ∨ᵢ b'} := by
+        grind
+      rw [this]
+      apply GentzDerives.or_l
+      · exact @iha' (Γ ∪ {a'}) Δ (by grind [set_comm_3]) (by grind [set_comm_3]) hab
+      · exact @ihb' (Γ ∪ {b'}) Δ (by grind [set_comm_3]) (by grind [set_comm_3]) hab
+    · injection h
+  | @or_r_1 Γ' a' b' ha iha' =>
+    exact GentzDerives.or_r_1 (iha' hΘ hΔ hab)
+  | @or_r_2 Γ' a' b' ha iha' =>
+    exact GentzDerives.or_r_2 (iha' hΘ hΔ hab)
+  | @and_l Γ' a' b' c hc ih =>
+    clear iha ihb
+    rw [show Γ = Γ ∪ {a' ∧ᵢ b'} by grind]
+    apply GentzDerives.and_l
+    exact @ih (Γ ∪ {a'} ∪ {b'}) Δ (by grind) (by grind) hab
+  | @and_r Γ' a' b' ha hb iha' ihb' =>
+    clear iha ihb
+    exact GentzDerives.and_r
+      (iha' hΘ hΔ hab)
+      (ihb' hΘ hΔ hab)
+  | @imp_l Γ' a'' b'' c ha hc iha' ihc' =>
+    have h : (a'' →ᵢ b'') ∈ Γ ∪ {a →ᵢ b} := by
+      clear iha ihb iha' ihc'
+      grind
+    rcases h with h | h
+    · have : Γ = Γ ∪ {a'' →ᵢ b''} := by
+        clear iha ihb iha' ihc'
+        grind
+      rw [this]
+      apply GentzDerives.imp_l
+      · exact @iha' Γ Δ (by grind) hΔ hab
+      · have : Γ' ∪ {b''} ⊆ Γ ∪ {b''} ∪ {a →ᵢ b} := by
+          clear iha ihb iha' ihc'
+          grind [set_comm_3]
+        exact @ihc' (Γ ∪ {b''}) Δ this (by tauto) hab
+    · cases h
+      have hΓa : GentzDerives Γ a := by
+        -- ex
+        clear iha ihb ihc'
+        exact @iha' Γ Δ (by grind) hΔ hab
+        -- /ex
+      have hΓab : GentzDerives (Γ ∪ {a}) b := by
+        -- ex
+        clear iha ihb iha' ihc'
+        apply GentzDerives.mono (by grind) hab
+        -- /ex
+      have hΓb : GentzDerives Γ b := by
+        -- ex
+        exact @iha Γ Γ b (by tauto) hΓa hΓab
+        -- /ex
+      have hΓbc : GentzDerives (Γ ∪ {b}) c := by
+        -- ex
+        clear iha ihb iha'
+        exact @ihc' (Γ ∪ {b}) Γ (by grind) (by grind) hΓab
+        -- /ex
+      have : GentzDerives Γ c := by
+        -- ex
+        exact @ihb Γ Γ c (by tauto) hΓb hΓbc
+        -- /ex
+      exact this
+  | @imp_r Γ' a' b' ha' iha' =>
+    apply GentzDerives.imp_r
+    have : Γ' ∪ {a'} ⊆ Γ ∪ {a'} ∪ {a →ᵢ b} := by
+      clear iha ihb iha'
+      grind
+    apply @iha' (Γ ∪ {a'}) Δ this (by tauto) hab
+
 lemma GentzDerives.cut_aux_imp_case (a' b' : IntFormula)
     (iha : ∀ {Γ Δ : Set IntFormula} {b : IntFormula},
       Δ ⊆ Γ → GentzDerives Δ a' → GentzDerives (Γ ∪ {a'}) b → GentzDerives Γ b)
@@ -628,6 +765,8 @@ lemma GentzDerives.cut_aux_imp_case (a' b' : IntFormula)
       exact ihc'
   | @imp_r Γ' a'' b'' ha'' iha'' =>
     cases hag
+    apply @GentzDerives.cut_aux_imp_imp_r_case (Γ ∪ {a' →ᵢ b'}) Γ Γ' a' b' b iha ihb
+      <;> grind
 
 theorem GentzDerives.cut_aux
     {Γ Δ : Set IntFormula} {a b : IntFormula} :
@@ -645,8 +784,18 @@ theorem GentzDerives.cut_aux
     apply GentzDerives.cut_aux_or_case
     · apply iha
     · apply ihb
-  | imp a' b' iha ihb => sorry
+  | imp a' b' iha ihb =>
+    apply GentzDerives.cut_aux_imp_case
+    · apply iha
+    · apply ihb
+  | bot =>
+    intro hΔ hΔb hΓb
+    apply GentzDerives.mono hΔ
+    exact GentzDerives.bot_inversion hΔb
 
--- theorem not_derives_imp_counter_model {a : IntFormula} :
---     ¬ (∅ ⊢ᵢ a) → ∃ (m : IntModel) (w : m.worlds), ¬ (w ⊨ᵢ a) := by
---   sorry
+theorem GentzDerives.cut
+    {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives Γ a →
+    GentzDerives (Γ ∪ {a}) b →
+    GentzDerives Γ b :=
+  GentzDerives.cut_aux (fun _ x => x)

@@ -2,7 +2,8 @@
 
 A set of logic exercises. Covered topics:
 
-* Hilbert-style intuitionistic logic (`IntExercises.lean`)
+* Hilbert-style intuitionistic logic (`IntHilbertExercises.lean`)
+* Gentzen-style intuitionistic logic (`IntGentzExercises.lean`)
 
 Quickstart: run the dev container, replace `exercise` terms with your solutions in `*Exercises.lean` files.
 

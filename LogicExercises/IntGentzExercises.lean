@@ -416,3 +416,27 @@ theorem GentzDerives.cut
     GentzDerives (Γ ∪ {a}) b →
     GentzDerives Γ b :=
   GentzDerives.cut_aux (fun _ x => x)
+
+theorem GentzDerives.mp {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives Γ a → GentzDerives Γ (a →ᵢ b) → GentzDerives Γ b := by
+  exercise
+
+theorem GentzDerives.deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives (Γ ∪ {a}) b → GentzDerives Γ (a →ᵢ b) :=
+  exercise
+
+theorem GentzDerives.deduction_revert {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives Γ (a →ᵢ b) → GentzDerives (Γ ∪ {a}) b :=
+  exercise
+
+theorem GentzDerives.deduction_iff {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives (Γ ∪ {a}) b ↔ GentzDerives Γ (a →ᵢ b) :=
+  ⟨deduction_intro, deduction_revert⟩
+
+theorem GentzDerives.by_contradiction_of {Γ : Set IntFormula} {a b : IntFormula} :
+    a ∈ Γ → (¬ᵢ a) ∈ Γ → GentzDerives Γ b := by
+  exercise
+
+example (a b : IntFormula) :
+    GentzDerives ∅ ((¬ᵢ a ∨ᵢ ¬ᵢ b) →ᵢ ¬ᵢ (a ∧ᵢ b)) := by
+  exercise

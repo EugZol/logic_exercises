@@ -866,3 +866,44 @@ theorem GentzDerives.cut
     GentzDerives (Γ ∪ {a}) b →
     GentzDerives Γ b :=
   GentzDerives.cut_aux (fun _ x => x)
+
+theorem GentzDerives.mp {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives Γ a → GentzDerives Γ (a →ᵢ b) → GentzDerives Γ b := by
+  -- ex
+  intro ha hab
+  apply GentzDerives.cut hab
+  apply GentzDerives.imp_l ha GentzDerives.id
+  -- /ex
+
+theorem GentzDerives.deduction_intro {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives (Γ ∪ {a}) b → GentzDerives Γ (a →ᵢ b) :=
+  /- ex -/ GentzDerives.imp_r /- /ex -/
+
+theorem GentzDerives.deduction_revert {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives Γ (a →ᵢ b) → GentzDerives (Γ ∪ {a}) b :=
+  /- ex -/ fun h => mp id (weaken h) /- /ex -/
+
+theorem GentzDerives.deduction_iff {Γ : Set IntFormula} {a b : IntFormula} :
+    GentzDerives (Γ ∪ {a}) b ↔ GentzDerives Γ (a →ᵢ b) :=
+  ⟨deduction_intro, deduction_revert⟩
+
+theorem GentzDerives.by_contradiction_of {Γ : Set IntFormula} {a b : IntFormula} :
+    a ∈ Γ → (¬ᵢ a) ∈ Γ → GentzDerives Γ b := by
+  -- ex
+  intro ha hna
+  rw [show Γ = Γ ∪ {a} ∪ {¬ᵢ a} by grind]
+  exact imp_l id exfalso
+  -- /ex
+
+example (a b : IntFormula) :
+    GentzDerives ∅ ((¬ᵢ a ∨ᵢ ¬ᵢ b) →ᵢ ¬ᵢ (a ∧ᵢ b)) := by
+  -- ex
+  apply GentzDerives.imp_r
+  apply GentzDerives.or_l
+  · apply GentzDerives.imp_r
+    apply GentzDerives.and_l
+    apply GentzDerives.by_contradiction_of (a := a) (by grind) (by grind)
+  · apply GentzDerives.imp_r
+    apply GentzDerives.and_l
+    apply GentzDerives.by_contradiction_of (a := b) (by grind) (by grind)
+  -- /ex
